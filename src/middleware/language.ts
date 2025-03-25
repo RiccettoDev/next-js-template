@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { i18nConfig, isValidLanguage } from '../config/i18n';
+import { i18nConfig, isValidLanguage, Language } from '../config/i18n';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -22,7 +22,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Detecta idioma preferido
-  let detectedLang = i18nConfig.defaultLanguage;
+  let detectedLang: Language = i18nConfig.defaultLanguage; // Tipo explícito aqui
   const cookieLang = request.cookies.get('preferred_lang')?.value;
   const acceptLang = request.headers.get('accept-language');
 
