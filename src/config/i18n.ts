@@ -1,6 +1,6 @@
 export const i18nConfig = {
   languages: ['pt', 'en', 'es'] as const,
-  defaultLanguage: 'pt' as const, // Adicione 'as const' aqui
+  defaultLanguage: 'en' as const, // Adicione 'as const' aqui
   defaultRoute: '/home'
 } as const;
 
