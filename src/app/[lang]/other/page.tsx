@@ -1,8 +1,9 @@
 'use client';
 
+import { Language } from '../../../config/i18n'; // Adicione esta importação
 import { useLanguage } from '../../../hooks/useLanguage';
 
-export default function OutroPage() {
+export default function OtherPage() {
   const { t, language, changeLanguage, isMounted } = useLanguage();
 
   if (!isMounted) {
