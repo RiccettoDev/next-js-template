@@ -1,25 +1,19 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { i18nConfig, isValidLanguage, Language } from '../config/i18n';
 
-// Tipos para as traduções
-type TranslationKeys = {
-  home: {
-    welcome: string;
-  };
-  outro: {
-    message: string;
-  };
+type TranslationSection = {
+  [key: string]: string;
 };
 
-type Translations = {
-  [key in Language]: TranslationKeys;
+type TranslationData = {
+  home: TranslationSection;
+  outro: TranslationSection;
 };
 
-// Dados de tradução (agora usando os arquivos JSON)
-const translations: Translations = {
+const defaultTranslations: Record<Language, TranslationData> = {
   pt: {
     home: { welcome: 'Bem-vindo' },
     outro: { message: 'Por aqui outras coisas acontecem' }
@@ -38,26 +32,72 @@ export const useLanguage = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [language, setLanguage] = useState<Language>(i18nConfig.defaultLanguage);
+  const [translations, setTranslations] = useState<Record<Language, TranslationData>>(defaultTranslations);
   const [isMounted, setIsMounted] = useState(false);
 
+  // Carrega as traduções do JSON
   useEffect(() => {
-    setIsMounted(true);
+    const loadTranslations = async () => {
+      try {
+        const loadedTranslations = { ...defaultTranslations };
+        
+        await Promise.all(
+          i18nConfig.languages.map(async (lang) => {
+            try {
+              const data = await import(`../locales/${lang}/common.json`);
+              loadedTranslations[lang] = {
+                home: { 
+                  welcome: data.default?.home?.welcome || defaultTranslations[lang].home.welcome 
+                },
+                outro: { 
+                  message: data.default?.outro?.message || defaultTranslations[lang].outro.message 
+                }
+              };
+            } catch (error) {
+              console.error(`Failed to load ${lang} translations:`, error);
+              loadedTranslations[lang] = defaultTranslations[lang];
+            }
+          })
+        );
+        
+        setTranslations(loadedTranslations);
+      } catch (error) {
+        console.error('Error loading translations:', error);
+        setTranslations(defaultTranslations);
+      } finally {
+        setIsMounted(true);
+      }
+    };
+
+    loadTranslations();
+  }, []);
+
+  // Atualiza o idioma quando a URL muda
+  useEffect(() => {
     const pathLang = pathname.split('/')[1];
     if (isValidLanguage(pathLang)) {
       setLanguage(pathLang);
     }
   }, [pathname]);
 
-  const changeLanguage = (newLang: Language) => {
+  const changeLanguage = useCallback((newLang: Language) => {
     const newPath = pathname.replace(/^\/[a-z]{2}/, `/${newLang}`);
     router.push(newPath);
     document.cookie = `preferred_lang=${newLang}; path=/; max-age=${60*60*24*365}; sameSite=lax`;
-  };
+  }, [pathname, router]);
 
-  const t = <K extends keyof TranslationKeys>(section: K, key: keyof TranslationKeys[K]) => {
+  const t = useCallback(<K extends keyof TranslationData>(
+    section: K,
+    key: keyof TranslationData[K]
+  ): string => {
     if (!isMounted) return '';
-    return translations[language][section][key] as string;
-  };
+    return translations[language]?.[section]?.[key] ?? '';
+  }, [language, translations, isMounted]);
 
-  return { language, changeLanguage, t, isMounted };
+  return { 
+    language, 
+    changeLanguage, 
+    t, 
+    isMounted 
+  };
 };
